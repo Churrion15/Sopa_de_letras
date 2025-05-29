@@ -39,6 +39,7 @@ h1 {
   width: fit-content; /* Ajusta el ancho a su contenido */
   margin: 0 auto 20px auto; /* Centra la cuadrícula */
   font-size: 1.1em;
+  touch-action: none;
 }
 
 .grid-cell {

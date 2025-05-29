@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const foundSound = document.getElementById("foundSound");
 
   let startTime;
-  let isSelecting = false; // Estado para saber si estamos en un proceso de selección (mouse o touch)
+  let isSelecting = false;
 
   // Generar la cuadrícula
   function generateGrid() {
@@ -59,9 +59,10 @@ document.addEventListener("DOMContentLoaded", () => {
         cell.addEventListener("mousedown", startSelection);
 
         // Eventos táctiles
+        // Asegúrate de que passive: false esté aquí para permitir preventDefault
         cell.addEventListener("touchstart", startSelectionTouch, {
           passive: false,
-        }); // passive: false para preventDefault
+        });
 
         wordSearchGrid.appendChild(cell);
       }
@@ -72,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- Funciones para la selección con ratón ---
   function startSelection(e) {
-    if (e.button !== 0) return; // Solo clic izquierdo
+    if (e.button !== 0) return;
     isSelecting = true;
     selectedCells = [];
     clearSelectedCellsStyles();
@@ -101,18 +102,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- Funciones para la selección táctil ---
   function startSelectionTouch(e) {
-    e.preventDefault(); // Evita el scroll o zoom por defecto al tocar
+    // e.preventDefault(); // Moved to touchmove/touchend listener registration below
     isSelecting = true;
     selectedCells = [];
     clearSelectedCellsStyles();
 
-    // Obtener la celda donde se inició el toque
     const touch = e.touches[0];
-    const cell = document.elementFromPoint(touch.clientX, touch.clientY);
-    if (cell && cell.classList.contains("grid-cell")) {
-      addCellToSelection(cell);
+    const initialCell = document.elementFromPoint(touch.clientX, touch.clientY);
+
+    console.log("Touch started on:", initialCell); // Depuración
+
+    if (initialCell && initialCell.classList.contains("grid-cell")) {
+      addCellToSelection(initialCell);
     }
 
+    // Listener para touchmove y touchend en el document
+    // Asegúrate de que passive: false esté aquí para permitir preventDefault en touchmove
     document.addEventListener("touchmove", duringSelectionTouch, {
       passive: false,
     });
@@ -126,12 +131,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const touch = e.touches[0];
     const cell = document.elementFromPoint(touch.clientX, touch.clientY);
 
+    // Depuración: Puedes ver qué celda está detectando el dedo
+    // console.log("During touch move, cell detected:", cell);
+
     if (cell && cell.classList.contains("grid-cell")) {
       addCellToSelection(cell);
     }
   }
 
-  function endSelectionTouch() {
+  function endSelectionTouch(e) {
+    // e.preventDefault(); // preventDefault en touchend puede ser problemático con el clic, no siempre necesario
     isSelecting = false;
     document.removeEventListener("touchmove", duringSelectionTouch);
     document.removeEventListener("touchend", endSelectionTouch);
@@ -139,19 +148,16 @@ document.addEventListener("DOMContentLoaded", () => {
     checkWord();
     clearSelectedCellsStyles();
     selectedCells = [];
+    console.log("Touch ended."); // Depuración
   }
   // ------------------------------------------
 
   function addCellToSelection(cell) {
-    // Añadir solo si no está ya seleccionada y es una celda válida
     if (
       cell &&
       cell.classList.contains("grid-cell") &&
       !selectedCells.includes(cell)
     ) {
-      // Opcional: para una experiencia más fluida en móvil, puedes verificar que las celdas sean adyacentes
-      // Esta verificación hace la selección más estricta, pero puede ser mejor para la usabilidad.
-      // Si la última celda seleccionada es válida y la nueva es adyacente a ella
       if (selectedCells.length > 0) {
         const lastCell = selectedCells[selectedCells.length - 1];
         const lastRow = parseInt(lastCell.dataset.row);
@@ -163,12 +169,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const colDiff = Math.abs(lastCol - newCol);
 
         // Permite solo movimientos a celdas adyacentes (horizontal, vertical o diagonal)
+        // y que no sea la misma celda
         if (rowDiff <= 1 && colDiff <= 1 && !(rowDiff === 0 && colDiff === 0)) {
           selectedCells.push(cell);
           cell.classList.add("selected");
         }
       } else {
-        // Si es la primera celda en la selección
         selectedCells.push(cell);
         cell.classList.add("selected");
       }
@@ -190,22 +196,31 @@ document.addEventListener("DOMContentLoaded", () => {
       col: parseInt(cell.dataset.col),
     }));
 
-    // NOTA IMPORTANTE: Para una sopa de letras real donde el usuario arrastra libremente,
-    // la reconstrucción de la palabra y la verificación de linealidad es compleja.
-    // Aquí asumimos que `selectedCells` están en orden (horizontal, vertical, diagonal)
-    // por cómo se seleccionaron y que forman una línea.
-    // La implementación actual no verifica si las celdas forman una línea recta perfecta
-    // lo cual es un desafío significativo en sopas de letras interactivas.
+    // La lógica de ordenar y reconstruir la palabra sigue siendo una simplificación.
+    // Para que funcione bien con selección táctil libre, deberíamos asegurarnos
+    // de que las celdas formen una línea recta y que se procesen en el orden correcto
+    // a lo largo de esa línea. Si la selección es un zigzag, no funcionará.
+    // Esto es un desafío inherente a la implementación de sopas de letras.
+    // Asumimos que el usuario intentará seleccionar en una dirección lineal.
 
-    // Una forma básica de "ordenar" las celdas para reconstruir la palabra
-    // podría ser ordenar por fila y luego por columna, o viceversa,
-    // dependiendo de la dirección dominante de la selección.
-    // Sin embargo, para una selección diagonal, esto puede no ser suficiente.
-    // Para simplificar, asumimos que el usuario selecciona en una dirección consistente.
-    coords.sort((a, b) => {
-      if (a.row !== b.row) return a.row - b.row;
-      return a.col - b.col;
-    });
+    // Intenta ordenar las celdas para que la palabra se forme correctamente.
+    // Esta heurística es una aproximación. Para palabras diagonales puede fallar si la selección es imperfecta.
+    if (coords.length > 1) {
+      const first = coords[0];
+      const last = coords[coords.length - 1];
+
+      const dRow = last.row - first.row;
+      const dCol = last.col - first.col;
+
+      // Determinar la dirección principal (horizontal, vertical, diagonal)
+      if (Math.abs(dRow) >= Math.abs(dCol)) {
+        // Más vertical o diagonal-vertical
+        coords.sort((a, b) => a.row - b.row || a.col - b.col);
+      } else {
+        // Más horizontal o diagonal-horizontal
+        coords.sort((a, b) => a.col - b.col || a.row - b.row);
+      }
+    }
 
     coords.forEach((coord) => {
       currentWord += gridData[coord.row][coord.col];
@@ -271,7 +286,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
 
-    // Formato para mostrar el tiempo
     let timeString = "";
     if (minutes > 0) {
       timeString += `${minutes} minuto${minutes === 1 ? "" : "s"}`;
@@ -280,11 +294,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
     if (seconds > 0 || totalSeconds === 0) {
-      // Muestra 0 segundos si el tiempo es muy corto
       timeString += `${seconds} segundo${seconds === 1 ? "" : "s"}`;
     }
     if (timeString === "") {
-      // Para casos donde el tiempo es 0 o muy pequeño
       timeString = `menos de 1 segundo`;
     }
 
@@ -302,6 +314,14 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelector(".instruccion").style.display = "none";
 
     document.querySelector(".container").appendChild(finalMessage);
+
+    // Opcional: Desactivar la interacción con la cuadrícula después de ganar
+    const allCells = document.querySelectorAll(".grid-cell");
+    allCells.forEach((cell) => {
+      cell.removeEventListener("mousedown", startSelection);
+      cell.removeEventListener("touchstart", startSelectionTouch);
+      cell.style.pointerEvents = "none"; // Desactiva clics y toques
+    });
   }
 
   // Inicializar la cuadrícula
