@@ -1,0 +1,143 @@
+body {
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; /* Alinea al principio para que el contenido no quede centrado verticalmente si es largo */
+  min-height: 100vh;
+  margin: 0;
+  background-color: #f0f0f0;
+  padding: 20px;
+  box-sizing: border-box; /* Incluye padding en el tamaño total */
+}
+
+.container {
+  background-color: #fff;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  max-width: 900px; /* Limita el ancho máximo para pantallas grandes */
+  width: 100%;
+}
+
+h1 {
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.numero {
+  font-size: 1.2em;
+  color: #666;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.word-search-grid {
+  display: grid;
+  /* Las columnas se definen con JavaScript para que sean dinámicas */
+  border: 1px solid #ccc;
+  width: fit-content; /* Ajusta el ancho a su contenido */
+  margin: 0 auto 20px auto; /* Centra la cuadrícula */
+  font-size: 1.1em;
+}
+
+.grid-cell {
+  width: 30px; /* Tamaño de cada celda */
+  height: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid #eee; /* Separación sutil entre celdas */
+  box-sizing: border-box;
+  cursor: pointer;
+  user-select: none; /* Evita la selección de texto por defecto */
+}
+
+.grid-cell.selected {
+  background-color: #a7d9ff; /* Color cuando la celda está seleccionada */
+}
+
+.grid-cell.found {
+  background-color: #d4edda; /* Color cuando la celda es parte de una palabra encontrada */
+  color: #0c6a2b;
+  font-weight: bold;
+}
+
+.instruccion {
+  margin-top: 20px;
+  font-size: 0.9em;
+  color: #555;
+}
+
+.word-lists-container {
+  display: flex;
+  justify-content: center;
+  gap: 40px; /* Espacio entre las dos listas */
+  flex-wrap: wrap; /* Permite que las listas se envuelvan en pantallas pequeñas */
+  margin-top: 30px;
+}
+
+.word-list {
+  text-align: left;
+}
+
+.word-list h2 {
+  font-size: 1.1em;
+  color: #444;
+  border-bottom: 2px solid #ccc;
+  padding-bottom: 5px;
+  margin-bottom: 15px;
+}
+
+.word-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.word-list li {
+  padding: 5px 0;
+  color: #333;
+  transition: all 0.3s ease;
+}
+
+.word-list li.found-word {
+  text-decoration: line-through;
+  color: #999;
+  font-style: italic;
+}
+
+/* Media Queries para responsividad */
+@media (max-width: 768px) {
+  .word-search-grid {
+    font-size: 0.9em;
+  }
+  .grid-cell {
+    width: 25px;
+    height: 25px;
+  }
+  .word-lists-container {
+    flex-direction: column; /* Apila las listas en pantallas pequeñas */
+    align-items: center;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 15px;
+  }
+  .grid-cell {
+    width: 20px;
+    height: 20px;
+  }
+  .word-search-grid {
+    font-size: 0.8em;
+  }
+  h1 {
+    font-size: 1.8em;
+  }
+  .numero {
+    font-size: 1em;
+  }
+}
